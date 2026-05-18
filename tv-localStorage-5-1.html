@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legend Play TV</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════
+   الحاوية الرئيسية — ثابتة 1280×720
+   تتحجم بـ JS لتناسب أي شاشة
+═══════════════════════════════════════ */
+#app {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  transform-origin: top left;
+  /* JS يضبط transform وmargin */
+  background: #07070f;
+  font-family: 'Tajawal', sans-serif;
+  color: #ede8d8;
+}
+
+canvas#bgc {
+  position: absolute;
+  inset: 0;
+  width: 1280px;
+  height: 720px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ═══ SCREENS ═══ */
+.scr {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  z-index: 1;
+}
+.scr.on { display: flex; }
+
+/* ═══════════════════════════════════════
+   TV SCREEN
+═══════════════════════════════════════ */
+#tv {
+  background:
+    radial-gradient(ellipse 1000px 280px at 640px -40px, rgba(212,169,78,.13), transparent 70%),
+    radial-gradient(ellipse 500px 500px at -60px 720px, rgba(58,158,255,.07), transparent 60%),
+    #07070f;
+}
+
+/* TOP BAR — 88px */
+.topbar {
+  flex-shrink: 0;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36px;
+  border-bottom: 1px solid rgba(212,169,78,.2);
+  background: linear-gradient(180deg, rgba(212,169,78,.09), transparent);
+  position: relative;
+  z-index: 2;
+}
+.topbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 80px; right: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212,169,78,.9), transparent);
+  animation: gl 4s ease-in-out infinite;
+}
+@keyframes gl { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+/* Logo */
+.logo { display: flex; align-items: center; gap: 14px; min-width: 320px; }
+.orb {
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(from 0deg, #7a5c1e, #d4a94e, #f5d580, #d4a94e, #7a5c1e);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 0 0 1px rgba(212,169,78,.4), 0 0 24px rgba(212,169,78,.4);
+  animation: spin 18s linear infinite;
+  position: relative;
+}
+.orb::after {
+  content: '';
+  position: absolute; inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(212,169,78,.5);
+  animation: spin 5s linear infinite reverse;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.shop-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px; font-weight: 900;
+  color: #d4a94e;
+  text-shadow: 0 0 20px rgba(212,169,78,.5);
+  white-space: nowrap;
+}
+.shop-sub { font-size: 12px; color: #4a4535; margin-top: 3px; }
+
+/* HUD center */
+.hud {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.live-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 16px;
+  background: rgba(255,59,59,.12);
+  border: 1px solid rgba(255,59,59,.45);
+  border-radius: 50px;
+  box-shadow: 0 0 12px rgba(255,59,59,.2);
+}
+.ldot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ff3b3b; box-shadow: 0 0 7px #ff3b3b;
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.2;transform:scale(1.6)} }
+.lword {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px; font-weight: 700;
+  color: #ff3b3b; letter-spacing: .25em;
+}
+#clock {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 34px; font-weight: 900;
+  color: #f5d580; letter-spacing: .08em; line-height: 1;
+  text-shadow: 0 0 18px rgba(212,169,78,.45);
+}
+#dateTxt { font-size: 11px; color: #4a4535; }
+
+/* Stats */
+.stats { display: flex; gap: 12px; min-width: 280px; justify-content: flex-end; }
+.stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 20px;
+  background: rgba(212,169,78,.05);
+  border: 1px solid rgba(212,169,78,.15);
+  border-radius: 10px;
+  position: relative;
+}
+.stat::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212,169,78,.6), transparent);
+}
+.sn {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 28px; font-weight: 900;
+  color: #d4a94e; line-height: 1;
+  text-shadow: 0 0 14px rgba(212,169,78,.4);
+}
+.sl { font-size: 11px; color: #4a4535; white-space: nowrap; }
+
+/* GRID ZONE — fills remaining height */
+.zone {
+  flex: 1;
+  display: grid;
+  padding: 12px 20px;
+  gap: 12px;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+  align-content: start;  /* كروت تبدأ من الأعلى وما تتمدد */
+}
+
+/* SESSION CARD */
+.sc {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255,255,255,.03), transparent 60%), #0c0b1a;
+  border: 1px solid rgba(212,169,78,.14);
+  display: flex;
+  flex-direction: column;
+  animation: ci .45s cubic-bezier(.34,1.56,.64,1) both;
+  transition: border-color .4s, box-shadow .4s;
+  /* حد أقصى للارتفاع — الكارد ما يكبر أكثر من اللازم */
+  max-height: 280px;
+}
+@keyframes ci {
+  from { opacity:0; transform: scale(.9) translateY(-20px); }
+  to   { opacity:1; transform: scale(1)  translateY(0); }
+}
+.sc::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.04) 50%, transparent 70%);
+  animation: sw 1s ease-out 1;
+  pointer-events: none;
+}
+@keyframes sw { from{transform:translateX(-100%)} to{transform:translateX(250%)} }
+
+.acc { height: 3px; width: 100%; flex-shrink: 0; border-radius: 14px 14px 0 0; }
+.p-r .acc { background: linear-gradient(90deg, #7a5c1e, #f5d580, #7a5c1e); }
+.p-m .acc { background: linear-gradient(90deg, #0d2a55, #3a9eff, #0d2a55); }
+.p-n .acc { background: linear-gradient(90deg, #0a1f44, #1a55bb, #0a1f44); }
+.p-d .acc { background: linear-gradient(90deg, #3d0070, #c060ff, #3d0070); }
+.p-x .acc { background: linear-gradient(90deg, #004433, #00e87a, #004433); }
+
+.sc.warn { border-color: rgba(255,140,0,.55); box-shadow: 0 0 20px rgba(255,140,0,.12); }
+.sc.dng {
+  border-color: rgba(255,59,59,.7);
+  animation: ci .45s cubic-bezier(.34,1.56,.64,1) both, rp 1.4s ease-in-out infinite;
+}
+@keyframes rp {
+  0%,100%{ box-shadow: 0 0 0 1px rgba(255,59,59,.3), 0 0 20px rgba(255,59,59,.15); }
+  50%    { box-shadow: 0 0 0 2px rgba(255,59,59,.7), 0 0 45px rgba(255,59,59,.35); }
+}
+.sc.done { border-color: rgba(0,232,122,.4); opacity: .72; }
+
+/* Card body */
+.cb {
+  flex: 1;
+  display: flex; flex-direction: column;
+  padding: 8px 12px 6px;
+  gap: 4px;
+  position: relative; z-index: 1;
+  min-height: 0;
+}
+
+.ctop { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+
+.cname {
+  font-size: 17px; font-weight: 900; line-height: 1.1;
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.p-r .cname { color: #d4a94e; text-shadow: 0 0 14px rgba(212,169,78,.35); }
+.p-m .cname { color: #85caff; text-shadow: 0 0 14px rgba(58,158,255,.35); }
+.p-n .cname { color: #7aadee; text-shadow: 0 0 14px rgba(26,85,187,.35);  }
+.p-d .cname { color: #d090ff; text-shadow: 0 0 14px rgba(192,96,255,.35); }
+.p-x .cname { color: #00e87a; text-shadow: 0 0 14px rgba(0,232,122,.35); }
+
+.cnum {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: #4a4535;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 50px;
+  font-size: 12px; font-weight: 700;
+  width: fit-content;
+}
+.p-r .chip { background:rgba(212,169,78,.1); border:1px solid rgba(212,169,78,.3); color:#d4a94e; }
+.p-m .chip { background:rgba(58,158,255,.1); border:1px solid rgba(58,158,255,.3); color:#85caff; }
+.p-n .chip { background:rgba(26,85,187,.12); border:1px solid rgba(58,120,200,.3); color:#8ab0ee; }
+.p-d .chip { background:rgba(192,96,255,.1); border:1px solid rgba(192,96,255,.3); color:#d090ff; }
+.p-x .chip { background:rgba(0,232,122,.1); border:1px solid rgba(0,232,122,.3); color:#00e87a; }
+
+/* Timer row */
+.ctimer {
+  flex: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* Ring */
+.rwrap { position: relative; flex-shrink: 0; }
+.rwrap svg { transform: rotate(-90deg); display: block; overflow: visible; }
+.rbg  { fill:none; stroke:rgba(255,255,255,.05); stroke-width:6; }
+.rglow{ fill:none; stroke-width:13; stroke-linecap:round; opacity:.2; filter:blur(5px);
+        transition: stroke-dashoffset 1s linear, stroke .5s; }
+.rarc { fill:none; stroke-width:6; stroke-linecap:round;
+        transition: stroke-dashoffset 1s linear, stroke .5s; }
+.rcent {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.rpct { font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; line-height:1; }
+.rsub { font-size:9px; color:#4a4535; margin-top:2px; }
+
+/* Big digits */
+.digs {
+  flex: 1;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-end;
+  min-width: 0;
+}
+.bignum {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 34px; font-weight: 900;
+  letter-spacing: .04em; line-height: 1;
+  white-space: nowrap;
+  transition: color .5s, text-shadow .5s;
+}
+.p-r .bignum { color:#d4a94e; text-shadow:0 0 20px rgba(212,169,78,.4); }
+.p-m .bignum { color:#85caff; text-shadow:0 0 20px rgba(58,158,255,.4); }
+.p-n .bignum { color:#7aadee; text-shadow:0 0 20px rgba(26,85,187,.4);  }
+.p-d .bignum { color:#d090ff; text-shadow:0 0 20px rgba(192,96,255,.4); }
+.p-x .bignum { color:#00e87a; text-shadow:0 0 20px rgba(0,232,122,.4); }
+.warn .bignum { color:#ff8c00!important; text-shadow:0 0 22px rgba(255,140,0,.55)!important; }
+.dng  .bignum {
+  color:#ff3b3b!important;
+  text-shadow:0 0 28px rgba(255,59,59,.7)!important;
+  animation: dp .65s ease-in-out infinite;
+}
+@keyframes dp { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+.done .bignum { color:#00e87a!important; text-shadow:0 0 20px rgba(0,232,122,.4)!important; }
+
+.diglbl { font-size:11px; color:#4a4535; margin-top:4px; }
+
+/* Progress bar */
+.bar { height:4px; background:rgba(255,255,255,.04); flex-shrink:0; border-radius:0 0 14px 14px; }
+.bfill { height:100%; border-radius:0 0 14px 14px; transition:width 1s linear, background .5s; }
+.p-r .bfill { background:linear-gradient(90deg,#7a5c1e,#f5d580); }
+.p-m .bfill { background:linear-gradient(90deg,#0d2a55,#3a9eff); }
+.p-n .bfill { background:linear-gradient(90deg,#0a1f44,#2255bb); }
+.p-d .bfill { background:linear-gradient(90deg,#3d0070,#c060ff); }
+.p-x .bfill { background:linear-gradient(90deg,#004433,#00e87a); }
+.warn .bfill { background:linear-gradient(90deg,#7a3a00,#ff8c00)!important; }
+.dng  .bfill { background:linear-gradient(90deg,#7a0000,#ff3b3b)!important; }
+.done .bfill { background:linear-gradient(90deg,#006633,#00e87a)!important; }
+
+/* Empty */
+#empty {
+  position:absolute; inset:0; z-index:1;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; pointer-events:none;
+}
+.eico { font-size:80px; opacity:.07; animation:fl 4s ease-in-out infinite; }
+@keyframes fl { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.etxt { font-size:20px; color:#4a4535; font-weight:800; }
+.esub { font-size:13px; color:#4a4535; opacity:.5; }
+
+/* FOOTER — 38px */
+.footer {
+  flex-shrink:0; height:38px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 36px;
+  border-top:1px solid rgba(212,169,78,.12);
+  background:linear-gradient(0deg, rgba(212,169,78,.05), transparent);
+  position:relative; z-index:2;
+}
+.footer::before {
+  content:''; position:absolute;
+  top:0; left:80px; right:80px; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,169,78,.4),transparent);
+}
+.fdots { display:flex; align-items:center; gap:6px; font-size:11px; color:#4a4535; }
+.fd { width:7px; height:7px; border-radius:50%; background:#d4a94e; opacity:.25; transition:opacity .3s; }
+.fd.on { opacity:1; animation:blink 1.2s ease-in-out infinite; }
+.fmid  { font-size:11px; color:#4a4535; letter-spacing:.04em; }
+.fbrand { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700; color:#7a5c1e; letter-spacing:.12em; }
+
+/* Admin btn */
+.admbtn {
+  position:absolute; bottom:48px; left:20px; z-index:5;
+  padding:6px 16px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(212,169,78,.22);
+  border-radius:50px;
+  color:#4a4535;
+  font-family:'Tajawal',sans-serif; font-size:12px; font-weight:700;
+  cursor:pointer; transition:all .25s;
+}
+.admbtn:hover { border-color:#d4a94e; color:#d4a94e; }
+
+/* زر إيقاف/تشغيل الكل */
+.pausebtn {
+  position:absolute; bottom:48px; left:160px; z-index:5;
+  padding:6px 18px;
+  background:rgba(0,0,0,.6);
+  border:1.5px solid rgba(255,140,0,.35);
+  border-radius:50px;
+  color:#ff8c00;
+  font-family:'Tajawal',sans-serif; font-size:12px; font-weight:700;
+  cursor:pointer; transition:all .25s;
+  display:flex; align-items:center; gap:6px;
+}
+.pausebtn:hover { border-color:#ff8c00; background:rgba(255,140,0,.1); }
+.pausebtn.paused {
+  border-color:rgba(0,232,122,.5);
+  color:#00e87a;
+  background:rgba(0,232,122,.07);
+}
+.pausebtn.paused:hover { background:rgba(0,232,122,.15); }
+/* نبضة حمراء على أيقونة التوقف */
+.pausebtn .pico { font-size:13px; }
+
+/* ═══════════════════════════════════════
+   ADMIN SCREEN
+═══════════════════════════════════════ */
+#admin {
+  background:
+    radial-gradient(ellipse 1000px 350px at 640px -60px, rgba(212,169,78,.09), transparent 65%),
+    #0e0d1c;
+  align-items:center; justify-content:center;
+}
+
+.panel {
+  width: 860px;
+  background: linear-gradient(160deg,rgba(255,255,255,.025),transparent 50%), #11102a;
+  border: 1px solid rgba(212,169,78,.18);
+  border-radius: 20px;
+  padding: 28px 36px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  position: relative; overflow:hidden;
+}
+.panel::before {
+  content:''; position:absolute;
+  top:0; left:20%; right:20%; height:1px;
+  background:linear-gradient(90deg,transparent,#d4a94e,transparent);
+}
+
+.ph { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px; }
+.porb {
+  width:64px; height:64px; border-radius:50%; flex-shrink:0;
+  background:conic-gradient(from 45deg,#7a5c1e,#d4a94e,#f5d580,#d4a94e,#7a5c1e);
+  display:flex; align-items:center; justify-content:center; font-size:32px;
+  box-shadow:0 0 32px rgba(212,169,78,.35);
+  animation:spin 14s linear infinite;
+}
+.ptitle { font-family:'Orbitron',sans-serif; font-size:24px; font-weight:900; color:#d4a94e; text-shadow:0 0 20px rgba(212,169,78,.45); }
+.psub   { font-size:12px; color:#4a4535; margin-top:4px; }
+
+.pcols { display:flex; gap:28px; }
+.pcol  { flex:1; display:flex; flex-direction:column; gap:12px; }
+.pdiv  { width:1px; background:rgba(212,169,78,.1); flex-shrink:0; }
+
+.fg  { display:flex; flex-direction:column; gap:5px; }
+.fl  { font-size:11px; color:#4a4535; font-weight:700; letter-spacing:.05em; }
+.fi  {
+  width:100%; padding:9px 12px;
+  background:rgba(255,255,255,.04);
+  border:1.5px solid rgba(212,169,78,.14);
+  border-radius:8px; color:#ede8d8;
+  font-family:'Tajawal',sans-serif; font-size:15px;
+  direction:rtl;
+  transition:border-color .2s, background .2s;
+}
+.fi:focus { outline:none; border-color:#d4a94e; background:rgba(212,169,78,.05); }
+
+/* Picker */
+.picker { display:flex; gap:10px; }
+.pk { position:relative; flex:1; cursor:pointer; }
+.pk input { position:absolute; opacity:0; width:0; }
+.pkb {
+  display:flex; flex-direction:column; align-items:center;
+  padding:13px 8px; gap:4px;
+  border-radius:11px; border:2px solid rgba(255,255,255,.07);
+  cursor:pointer; transition:all .22s cubic-bezier(.34,1.56,.64,1); text-align:center;
+}
+.pk input:checked + .pkb { transform:translateY(-3px) scale(1.04); }
+.pke { font-size:26px; }
+.pkn { font-size:15px; font-weight:900; line-height:1; }
+.pkd { font-size:11px; opacity:.5; }
+.pkp { font-size:11px; font-weight:700; margin-top:2px; }
+
+.pk.r .pkb  { background:rgba(212,169,78,.06); border-color:rgba(212,169,78,.2); }
+.pk.r input:checked+.pkb { background:rgba(212,169,78,.2); border-color:#d4a94e; box-shadow:0 0 20px rgba(212,169,78,.3); }
+.pk.r .pkn  { color:#d4a94e; } .pk.r .pkp { color:#f5d580; }
+.pk.m .pkb  { background:rgba(58,158,255,.06); border-color:rgba(58,158,255,.18); }
+.pk.m input:checked+.pkb { background:rgba(58,158,255,.18); border-color:#3a9eff; box-shadow:0 0 20px rgba(58,158,255,.3); }
+.pk.m .pkn  { color:#85caff; } .pk.m .pkp { color:#90d0ff; }
+.pk.n .pkb  { background:rgba(26,85,187,.08); border-color:rgba(58,120,200,.2); }
+.pk.n input:checked+.pkb { background:rgba(26,85,187,.22); border-color:#4477dd; box-shadow:0 0 20px rgba(26,85,187,.35); }
+.pk.n .pkn  { color:#8ab0ee; } .pk.n .pkp { color:#aac8ff; }
+
+.pk.d .pkb  { background:rgba(192,96,255,.06); border-color:rgba(192,96,255,.2); }
+.pk.d input:checked+.pkb { background:rgba(192,96,255,.22); border-color:#c060ff; box-shadow:0 0 20px rgba(192,96,255,.4); }
+.pk.d .pkn  { color:#d090ff; } .pk.d .pkp { color:#e0b0ff; }
+
+.pk.x .pkb  { background:rgba(0,232,122,.06); border-color:rgba(0,232,122,.2); }
+.pk.x input:checked+.pkb { background:rgba(0,232,122,.18); border-color:#00e87a; box-shadow:0 0 20px rgba(0,232,122,.35); }
+.pk.x .pkn  { color:#00e87a; } .pk.x .pkp { color:#80f5bd; }
+
+/* حقل الوقت المخصص */
+#customTimeWrap {
+  display:none;
+  gap:8px;
+  align-items:center;
+  background:rgba(0,232,122,.05);
+  border:1.5px solid rgba(0,232,122,.2);
+  border-radius:10px;
+  padding:10px 14px;
+  margin-top:2px;
+  transition:all .3s;
+}
+#customTimeWrap.show { display:flex; }
+#customTimeWrap label { font-size:12px; color:#00e87a; font-weight:700; white-space:nowrap; }
+.ctime-inputs { display:flex; gap:8px; flex:1; }
+.cti-block { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+.cti-block span { font-size:10px; color:#4a4535; }
+.cti {
+  width:100%; padding:7px 6px; text-align:center;
+  background:rgba(255,255,255,.05);
+  border:1.5px solid rgba(0,232,122,.25);
+  border-radius:7px; color:#00e87a;
+  font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700;
+}
+.cti:focus { outline:none; border-color:#00e87a; background:rgba(0,232,122,.08); }
+
+.brow { display:flex; gap:10px; margin-top:4px; }
+.bgo {
+  flex:1; padding:13px;
+  background:linear-gradient(135deg,#d4a94e,#8a5c18,#d4a94e);
+  background-size:200% 100%;
+  border:none; border-radius:10px; color:#000;
+  font-family:'Tajawal',sans-serif; font-size:16px; font-weight:900;
+  cursor:pointer; transition:transform .2s, box-shadow .2s;
+  box-shadow:0 8px 28px rgba(212,169,78,.3);
+  animation:shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer { 0%,100%{background-position:0%} 50%{background-position:100%} }
+.bgo:hover { transform:translateY(-3px); box-shadow:0 14px 36px rgba(212,169,78,.5); }
+.bgo:active { transform:translateY(0); }
+.btv {
+  padding:13px 20px;
+  background:rgba(212,169,78,.08); border:1px solid rgba(212,169,78,.22);
+  border-radius:10px; color:#d4a94e;
+  font-family:'Tajawal',sans-serif; font-size:14px; font-weight:700;
+  cursor:pointer; transition:all .22s; white-space:nowrap;
+}
+.btv:hover { background:rgba(212,169,78,.18); }
+
+/* ═══ FINISHED ═══ */
+#fin {
+  position:fixed; inset:0; z-index:9999;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.88); backdrop-filter:blur(14px);
+  padding:24px;
+}
+#fin.on { display:flex; }
+.fbox {
+  width:min(460px, 88vw);
+  background:linear-gradient(160deg,rgba(255,255,255,.04),transparent),#11102a;
+  border:2px solid #00e87a; border-radius:24px;
+  padding:clamp(28px,6vw,50px) clamp(24px,7vw,60px); text-align:center;
+  box-shadow:0 0 60px rgba(0,232,122,.3), 0 0 160px rgba(0,232,122,.1);
+  animation:fpop .48s cubic-bezier(.34,1.56,.64,1);
+  position:relative; overflow:hidden;
+}
+.fbox::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,232,122,.08),transparent 60%); }
+@keyframes fpop { from{transform:scale(.65);opacity:0} to{transform:scale(1);opacity:1} }
+.fico  { font-size:68px; margin-bottom:14px; animation:fb 1s ease-in-out infinite alternate; }
+@keyframes fb { from{transform:scale(.94)} to{transform:scale(1.09)} }
+.fhead { font-size:26px; font-weight:900; color:#00e87a; margin-bottom:10px; text-shadow:0 0 20px rgba(0,232,122,.5); }
+.fname { font-size:38px; font-weight:900; margin-bottom:6px; }
+.fcard { font-size:14px; color:#4a4535; margin-bottom:24px; }
+.fok {
+  display:block;
+  padding:16px 48px; background:#00e87a;
+  border:none; border-radius:50px; color:#000;
+  font-family:'Tajawal',sans-serif; font-size:clamp(16px,4vw,18px); font-weight:900;
+  cursor:pointer; transition:all .22s;
+  box-shadow:0 6px 22px rgba(0,232,122,.45);
+  min-width:180px; min-height:56px;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:rgba(0,232,122,.3);
+  user-select:none;
+  margin:0 auto;
+  position:relative; z-index:10;
+}
+.fok:active { transform:scale(.95); background:#00c86a; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="bgc" width="1280" height="720"></canvas>
+
+  <!-- ══ TV ══ -->
+  <div id="tv" class="scr on">
+    <div class="topbar">
+      <div class="logo">
+        <div class="orb" id="tvOrb">🎮</div>
+        <div>
+          <div class="shop-name" id="tvName">Legend Play</div>
+          <div class="shop-sub"  id="tvSub">مركز ألعاب الفيديو</div>
+        </div>
+      </div>
+      <div class="hud">
+        <div class="live-pill"><div class="ldot"></div><span class="lword">LIVE</span></div>
+        <div id="clock">00:00:00</div>
+        <div id="dateTxt"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="sn" id="sAct">0</span><span class="sl">جلسة نشطة</span></div>
+        <div class="stat"><span class="sn" id="sTot">0</span><span class="sl">إجمالي اليوم</span></div>
+      </div>
+    </div>
+
+    <div class="zone" id="zone">
+      <div id="empty">
+        <div class="eico">🎮</div>
+        <div class="etxt">لا توجد جلسات نشطة</div>
+        <div class="esub">افتح لوحة التحكم وابدأ جلسة</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="fdots" id="fdots"><span>لا جلسات نشطة</span></div>
+      <div class="fmid">جميع الأوقات محسوبة بدقة</div>
+      <div class="fbrand" id="fbrand">LEGEND PLAY</div>
+    </div>
+
+    <button class="admbtn" onclick="toAdmin()">⚙ لوحة التحكم</button>
+    <button class="pausebtn" id="pauseAllBtn" onclick="togglePauseAll()">
+      <span class="pico">⏸</span><span id="pauseAllTxt">إيقاف الكل</span>
+    </button>
+  </div>
+
+  <!-- ══ ADMIN ══ -->
+  <div id="admin" class="scr">
+    <div class="panel">
+      <div class="ph">
+        <div class="porb" id="pOrb">🎮</div>
+        <div>
+          <div class="ptitle" id="pTitle">Legend Play</div>
+          <div class="psub">لوحة تحكم المطور</div>
+        </div>
+      </div>
+      <div class="pcols">
+        <div class="pcol">
+          <div style="font-size:11px;color:#7a5c1e;font-weight:800;letter-spacing:.07em">⚙ إعدادات المحل</div>
+          <div class="fg"><label class="fl">اسم المحل</label><input class="fi" id="cName" value="Legend Play"></div>
+          <div class="fg"><label class="fl">الشعار (إيموجي)</label><input class="fi" id="cEmoji" value="🎮" maxlength="4"></div>
+          <div class="fg"><label class="fl">الشعار الفرعي</label><input class="fi" id="cTag" value="مركز ألعاب الفيديو"></div>
+        </div>
+        <div class="pdiv"></div>
+        <div class="pcol">
+          <div style="font-size:11px;color:#7a5c1e;font-weight:800;letter-spacing:.07em">▶ جلسة جديدة</div>
+          <div class="fg"><label class="fl">اسم الزبون</label><input class="fi" id="cust" placeholder="أدخل اسم الزبون..."></div>
+          <div class="picker">
+            <div class="pk r"><input type="radio" name="c" id="cr" value="ronaldo" checked>
+              <label class="pkb" for="cr"><span class="pke">⚡</span><span class="pkn" style="color:#d4a94e">رونالدو</span><span class="pkd">ساعة كاملة</span><span class="pkp" style="color:#f5d580">1500 د.ع</span></label></div>
+            <div class="pk m"><input type="radio" name="c" id="cm" value="messi">
+              <label class="pkb" for="cm"><span class="pke">🏆</span><span class="pkn" style="color:#85caff">ميسي</span><span class="pkd">ساعة ونصف</span><span class="pkp" style="color:#90d0ff">2000 د.ع</span></label></div>
+            <div class="pk n"><input type="radio" name="c" id="cn" value="neymar">
+              <label class="pkb" for="cn"><span class="pke">🎯</span><span class="pkn" style="color:#8ab0ee">نيمار</span><span class="pkd">30 دقيقة</span><span class="pkp" style="color:#aac8ff">750 د.ع</span></label></div>
+            <div class="pk d"><input type="radio" name="c" id="cd" value="draxon">
+              <label class="pkb" for="cd"><span class="pke">🐉</span><span class="pkn" style="color:#d090ff">دراكسون</span><span class="pkd">11 دقيقة</span><span class="pkp" style="color:#e0b0ff">500 د.ع</span></label></div>
+            <div class="pk x"><input type="radio" name="c" id="cx" value="custom" onchange="toggleCustomTime()">
+              <label class="pkb" for="cx"><span class="pke">⏱</span><span class="pkn" style="color:#00e87a">مخصص</span><span class="pkd">وقت حر</span><span class="pkp" style="color:#80f5bd">أي مدة</span></label></div>
+          </div>
+          <!-- حقل الوقت المخصص -->
+          <div id="customTimeWrap">
+            <label>⏱ حدد المدة:</label>
+            <div class="ctime-inputs">
+              <div class="cti-block">
+                <input class="cti fi" type="number" id="ctHour" min="0" max="23" value="0" placeholder="0">
+                <span>ساعة</span>
+              </div>
+              <div class="cti-block">
+                <input class="cti fi" type="number" id="ctMin" min="0" max="59" value="30" placeholder="30">
+                <span>دقيقة</span>
+              </div>
+            </div>
+          </div>
+          <div class="brow">
+            <button class="bgo" onclick="addSess()">▶ ابدأ الجلسة</button>
+            <button class="btv" onclick="toTV()">📺 التلفاز</button>
+          </div>
+          <button onclick="testSound()" style="
+            width:100%;margin-top:6px;padding:10px;
+            background:rgba(0,232,122,.08);
+            border:1px solid rgba(0,232,122,.3);
+            border-radius:10px;color:#00e87a;
+            font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;
+            cursor:pointer;transition:all .2s;
+          " onmouseover="this.style.background='rgba(0,232,122,.18)'"
+             onmouseout="this.style.background='rgba(0,232,122,.08)'">
+            🔔 اختبار الصوت والمنبه
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <!-- ══ FINISHED — خارج #app حتى ما يتأثر بالـ scale ══ -->
+  <div id="fin">
+    <div class="fbox">
+      <div class="fico">✅</div>
+      <div class="fhead">انتهى الوقت!</div>
+      <div class="fname" id="fName"></div>
+      <div class="fcard" id="fCard"></div>
+      <div id="finCountdown" style="font-family:'Orbitron',sans-serif;font-size:13px;color:#4a4535;margin-top:10px;"></div>
+    </div>
+  </div>
+
+<script>
+/* ══ localStorage ══ */
+const LS_KEY = 'lgp_sessions';
+
+function fbSave(s){
+  try{
+    const all = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+    all[s.id] = { id:s.id, num:s.num, name:s.name, type:s.type, total:s.total, t0:s.t0, fin:s.fin, lbl:s.lbl||'' };
+    localStorage.setItem(LS_KEY, JSON.stringify(all));
+  }catch(_){}
+}
+
+function fbDel(id){
+  try{
+    const all = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+    delete all[id];
+    localStorage.setItem(LS_KEY, JSON.stringify(all));
+  }catch(_){}
+}
+
+function fbListen(){
+  /* تحميل الجلسات المحفوظة عند الفتح */
+  try{
+    const all = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+    const saved = Object.values(all);
+    saved.forEach(s=>{
+      s.rem = Math.max(0, s.total - Math.floor((Date.now()-s.t0)/1000));
+      /* إذا انتهى الوقت وهو مش fin، اعتبره منتهي */
+      if(s.rem === 0) s.fin = true;
+      if(!sess.find(x=>x.id===s.id)) sess.push(s);
+    });
+    today = Math.max(today, saved.length);
+    num   = saved.reduce((m,s)=>Math.max(m,s.num), num);
+    if(sess.length && !ticker) ticker = setInterval(tick,1000);
+    render();
+  }catch(_){}
+}
+
+/* ══ SCALE — الحل الصحيح ══
+   نحسب scale بناءً على حجم الشاشة الفعلي
+   ونطبقه على #app مباشرة بدون أي مكتبة */
+function fitScreen() {
+  const app = document.getElementById('app');
+  const W = 1280, H = 720;
+  const sw = window.innerWidth;
+  const sh = window.innerHeight;
+  const scale = Math.min(sw / W, sh / H);
+  const left  = Math.round((sw - W * scale) / 2);
+  const top   = Math.round((sh - H * scale) / 2);
+  app.style.transform = `scale(${scale})`;
+  app.style.transformOrigin = 'top left';
+  app.style.position = 'absolute';
+  app.style.left = left + 'px';
+  app.style.top  = top  + 'px';
+}
+window.addEventListener('resize', fitScreen);
+fitScreen();
+
+/* ══ PARTICLES ══ */
+(()=>{
+  const cv = document.getElementById('bgc');
+  const cx = cv.getContext('2d');
+  const G  = 'rgba(212,169,78,';
+  const pts = Array.from({length:55}, ()=>({
+    x: Math.random()*1280, y: Math.random()*720,
+    vx: (Math.random()-.5)*.22, vy: (Math.random()-.5)*.22,
+    r:  Math.random()*1.4+.3,
+    ph: Math.random()*Math.PI*2
+  }));
+  let t = 0;
+  function f(){
+    cx.clearRect(0,0,1280,720); t += .008;
+    pts.forEach(p=>{
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<-5)p.x=1285; if(p.x>1285)p.x=-5;
+      if(p.y<-5)p.y=725;  if(p.y>725) p.y=-5;
+      const a = .08+.28*(.5+.5*Math.sin(t+p.ph));
+      cx.beginPath(); cx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      cx.fillStyle = G+a+')'; cx.fill();
+    });
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){
+        const a=.05*(1-d/120)*(.5+.5*Math.sin(t+pts[i].ph));
+        cx.beginPath(); cx.moveTo(pts[i].x,pts[i].y); cx.lineTo(pts[j].x,pts[j].y);
+        cx.strokeStyle=G+a+')'; cx.lineWidth=.6; cx.stroke();
+      }
+    }
+    requestAnimationFrame(f);
+  }
+  f();
+})();
+
+/* ══ DATA ══ */
+const CARDS = {
+  ronaldo:{ name:'رونالدو', e:'⚡', dur:3600, cls:'p-r', lbl:'بطاقة رونالدو · ساعة كاملة', col:'#d4a94e' },
+  messi:  { name:'ميسي',   e:'🏆', dur:5400, cls:'p-m', lbl:'بطاقة ميسي · ساعة ونصف',     col:'#3a9eff' },
+  neymar: { name:'نيمار',  e:'🎯', dur:1800, cls:'p-n', lbl:'بطاقة نيمار · 30 دقيقة',     col:'#4477dd' },
+  draxon: { name:'دراكسون',e:'🐉', dur:660,  cls:'p-d', lbl:'بطاقة دراكسون · 11 دقيقة',   col:'#c060ff' },
+  custom: { name:'مخصص',   e:'⏱', dur:1800, cls:'p-x', lbl:'بطاقة مخصصة',                 col:'#00e87a' }
+};
+let sess=[], num=0, today=0, ticker=null, finQ=[], finBusy=false;
+
+/* ══ PAUSE ALL ══ */
+let allPaused = false;
+let pausedAt = null;
+
+function togglePauseAll(){
+  const btn  = document.getElementById('pauseAllBtn');
+  const ico  = btn.querySelector('.pico');
+  const txt  = document.getElementById('pauseAllTxt');
+
+  if(!allPaused){
+    /* إيقاف */
+    allPaused = true;
+    pausedAt  = Date.now();
+    clearInterval(ticker); ticker = null;
+    btn.classList.add('paused');
+    ico.textContent = '▶';
+    txt.textContent = 'تشغيل الكل';
+  } else {
+    /* تشغيل — نعوّض الوقت المتوقف */
+    const elapsed = Date.now() - pausedAt;
+    sess.forEach(s=>{ if(!s.fin) s.t0 += elapsed; });
+    allPaused = false; pausedAt = null;
+    btn.classList.remove('paused');
+    ico.textContent = '⏸';
+    txt.textContent = 'إيقاف الكل';
+    if(sess.some(s=>!s.fin)){
+      ticker = setInterval(tick, 1000);
+    }
+    render();
+  }
+}
+window.togglePauseAll = togglePauseAll;
+
+/* ══ CUSTOM TIME TOGGLE ══ */
+function toggleCustomTime(){
+  const type = document.querySelector('input[name="c"]:checked')?.value;
+  const wrap = document.getElementById('customTimeWrap');
+  if(type === 'custom') wrap.classList.add('show');
+  else wrap.classList.remove('show');
+}
+window.toggleCustomTime = toggleCustomTime;
+/* إخفاء عند اختيار بطاقة أخرى */
+document.querySelectorAll('input[name="c"]').forEach(r=>{
+  r.addEventListener('change', toggleCustomTime);
+});
+
+/* ══ ADD ══ */
+function addSess(){
+  const name = document.getElementById('cust').value.trim();
+  const type = document.querySelector('input[name="c"]:checked')?.value;
+  if(!name){ alert('أدخل اسم الزبون'); return; }
+  if(!type){ alert('اختر البطاقة');     return; }
+
+  let dur = CARDS[type].dur;
+  let lbl = CARDS[type].lbl;
+
+  if(type === 'custom'){
+    const h = parseInt(document.getElementById('ctHour').value)||0;
+    const m = parseInt(document.getElementById('ctMin').value)||0;
+    dur = h*3600 + m*60;
+    if(dur < 60){ alert('أدخل مدة صحيحة (دقيقة على الأقل)'); return; }
+    const hPart = h>0 ? `${h} ساعة ` : '';
+    const mPart = m>0 ? `${m} دقيقة` : '';
+    lbl = `بطاقة مخصصة · ${hPart}${mPart}`.trim();
+    CARDS.custom.lbl = lbl;
+  }
+
+  num++; today++;
+  const s = { id:'s'+Date.now(), num, name, type, lbl,
+    total: dur, rem: dur, t0: Date.now(), fin: false };
+  sess.push(s);
+  fbSave(s);
+  document.getElementById('cust').value = '';
+  saveCfg();
+  if(!ticker) ticker = setInterval(tick, 1000);
+  toTV();
+}
+window.addSess = addSess;
+
+/* ══ TICK ══ */
+function tick(){
+  sess.forEach(s=>{
+    if(s.fin) return;
+    s.rem = Math.max(0, s.total - Math.floor((Date.now()-s.t0)/1000));
+    if(s.rem===0 && !s.fin){
+      s.fin=true;
+      fbSave(s);                        /* حفظ حالة انتهى */
+      setTimeout(()=>fbDel(s.id), 8000); /* احذف بعد 8 ثواني */
+      finQ.push(s); procQ();
+    }
+  });
+  render();
+}
+
+/* ══ QUEUE ══ */
+let finTimer = null;
+function procQ(){
+  if(finBusy||!finQ.length) return;
+  const s = finQ.shift(); finBusy = true;
+  beep();
+  speak(`انتهى وقت ${s.name}، ${s.lbl||CARDS[s.type].lbl}`);
+  document.getElementById('fName').textContent = s.name;
+  document.getElementById('fCard').textContent = s.lbl||CARDS[s.type].lbl;
+  document.getElementById('fin').classList.add('on');
+
+  /* عداد تنازلي 10 ثواني ثم يغلق تلقائياً */
+  let count = 10;
+  const cd = document.getElementById('finCountdown');
+  cd.textContent = `يغلق خلال ${count} ثانية`;
+  clearInterval(finTimer);
+  finTimer = setInterval(()=>{
+    count--;
+    if(count <= 0){
+      clearInterval(finTimer);
+      dimFin();
+    } else {
+      cd.textContent = `يغلق خلال ${count} ثانية`;
+    }
+  }, 1000);
+}
+function dimFin(){
+  clearInterval(finTimer);
+  document.getElementById('finCountdown').textContent = '';
+  document.getElementById('fin').classList.remove('on');
+  finBusy = false; setTimeout(procQ, 600);
+}
+window.dimFin = dimFin;
+
+/* ══ RENDER ══ */
+function z(n){ return String(n).padStart(2,'0'); }
+function fmt(s){
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60;
+  return h>0 ? `${h}:${z(m)}:${z(ss)}` : `${z(m)}:${z(ss)}`;
+}
+function stCls(s){
+  if(s.fin) return 'done';
+  const p = s.rem/s.total;
+  if(p<=.1)  return 'dng';
+  if(p<=.25) return 'warn';
+  return '';
+}
+
+function render(){
+  const zone  = document.getElementById('zone');
+  const empty = document.getElementById('empty');
+  const alive = sess.filter(s=>!s.fin);
+
+  document.getElementById('sAct').textContent = alive.length;
+  document.getElementById('sTot').textContent = today;
+
+  const fd = document.getElementById('fdots');
+  fd.innerHTML = alive.length
+    ? alive.map(s=>`<div class="fd on" style="background:${CARDS[s.type].col}"></div>`).join('')
+      + `<span>&nbsp;${alive.length} جلسة نشطة</span>`
+    : '<span>لا جلسات نشطة</span>';
+
+  if(!sess.length){
+    empty.style.display = 'flex';
+    zone.querySelectorAll('.sc').forEach(e=>e.remove());
+    return;
+  }
+  empty.style.display = 'none';
+
+  /* Grid: دائماً عمودين على الأقل */
+  const n    = sess.length;
+  const cols = n<=2?2 : n<=4?2 : n<=6?3 : 4;
+  const rows = Math.ceil(n/cols);
+
+  zone.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  zone.style.gridTemplateRows    = `repeat(${rows}, auto)`;
+
+  /* حجم الحلقة بناءً على عرض الكارد فقط */
+  const gapPx = 12;
+  const zoneW = 1240;
+  const cardW = (zoneW - gapPx*(cols-1)) / cols;
+  const ringSz = Math.round(Math.min(cardW * .22, 95));
+
+  /* Remove orphans */
+  zone.querySelectorAll('.sc').forEach(el=>{
+    if(!sess.find(s=>s.id===el.dataset.sid)) el.remove();
+  });
+
+  sess.forEach((s, i)=>{
+    const C   = CARDS[s.type];
+    const st  = stCls(s);
+    const pct = s.fin ? 0 : s.rem/s.total;
+    const R   = 42, circ = 2*Math.PI*R, off = circ*(1-pct);
+    const tcol = s.fin?'#00e87a' : st==='dng'?'#ff3b3b' : st==='warn'?'#ff8c00' : C.col;
+    const cardLbl = s.lbl || C.lbl;
+
+    let el = document.getElementById('sc_'+s.id);
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'sc_'+s.id; el.dataset.sid = s.id;
+      el.className = `sc ${C.cls}`;
+      el.style.animationDelay = (i*.07)+'s';
+      el.innerHTML = `
+        <div class="acc"></div>
+        <div class="cb">
+          <div class="ctop">
+            <div class="cname">${s.name}</div>
+            <div class="cnum">#${s.num}</div>
+          </div>
+          <div class="chip">${C.e} ${C.name}</div>
+          <div class="ctimer">
+            <div class="rwrap" style="width:${ringSz}px;height:${ringSz}px">
+              <svg width="${ringSz}" height="${ringSz}" viewBox="0 0 100 100">
+                <circle class="rbg"   cx="50" cy="50" r="${R}"/>
+                <circle class="rglow" cx="50" cy="50" r="${R}"
+                  stroke="${C.col}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+                <circle class="rarc"  cx="50" cy="50" r="${R}"
+                  stroke="${C.col}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+              </svg>
+              <div class="rcent">
+                <div class="rpct" style="color:${C.col}">${s.fin?'✅':Math.round(pct*100)+'%'}</div>
+                <div class="rsub">${s.fin?'تم':'متبقي'}</div>
+              </div>
+            </div>
+            <div class="digs">
+              <div class="bignum">${s.fin?'انتهى':fmt(s.rem)}</div>
+              <div class="diglbl">${cardLbl}</div>
+            </div>
+          </div>
+        </div>
+        <div class="bar"><div class="bfill" style="width:${(pct*100).toFixed(1)}%"></div></div>`;
+      zone.appendChild(el);
+    } else {
+      el.className = `sc ${C.cls}${st?' '+st:''}`;
+      const arc  = el.querySelector('.rarc');
+      const glow = el.querySelector('.rglow');
+      arc.setAttribute('stroke-dashoffset',  off.toFixed(1));
+      glow.setAttribute('stroke-dashoffset', off.toFixed(1));
+      arc.style.stroke  = tcol;
+      glow.style.stroke = tcol;
+      el.querySelector('.rpct').textContent   = s.fin?'✅':Math.round(pct*100)+'%';
+      el.querySelector('.rpct').style.color   = tcol;
+      el.querySelector('.bignum').textContent = s.fin?'انتهى':fmt(s.rem);
+      el.querySelector('.bfill').style.width  = (pct*100).toFixed(1)+'%';
+    }
+  });
+}
+
+/* ══ CLOCK ══ */
+function clockTick(){
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dateTxt').textContent =
+    n.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+setInterval(clockTick, 500); clockTick();
+
+/* ══ CONFIG ══ */
+function applyDisp(n,e,t){
+  document.getElementById('tvName').textContent  = n||'Legend Play';
+  document.getElementById('tvSub').textContent   = t||'';
+  document.getElementById('tvOrb').textContent   = e||'🎮';
+  document.getElementById('pOrb').textContent    = e||'🎮';
+  document.getElementById('pTitle').textContent  = n||'Legend Play';
+  document.getElementById('fbrand').textContent  = (n||'Legend Play').toUpperCase();
+}
+function saveCfg(){
+  const n=document.getElementById('cName').value,
+        e=document.getElementById('cEmoji').value,
+        t=document.getElementById('cTag').value;
+  try{ localStorage.setItem('lgp5', JSON.stringify({n,e,t})); }catch(_){}
+  applyDisp(n,e,t);
+}
+function loadCfg(){
+  try{
+    const d = JSON.parse(localStorage.getItem('lgp5')||'{}');
+    if(d.n) document.getElementById('cName').value  = d.n;
+    if(d.e) document.getElementById('cEmoji').value = d.e;
+    if(d.t) document.getElementById('cTag').value   = d.t;
+    applyDisp(d.n, d.e, d.t);
+  }catch(_){}
+}
+['cName','cEmoji','cTag'].forEach(id=>
+  document.getElementById(id)?.addEventListener('input', saveCfg)
+);
+
+/* ══ NAV ══ */
+function toTV(){
+  document.getElementById('admin').classList.remove('on');
+  document.getElementById('tv').classList.add('on');
+  render();
+}
+function toAdmin(){
+  document.getElementById('tv').classList.remove('on');
+  document.getElementById('admin').classList.add('on');
+}
+window.toTV    = toTV;
+window.toAdmin = toAdmin;
+
+/* ══ AUDIO ══ */
+function beep(){
+  try{
+    const A = new(window.AudioContext||window.webkitAudioContext)();
+    const master = A.createGain();
+    master.gain.value = 1.5; /* حجم عالي */
+    master.connect(A.destination);
+
+    /* صوت منبه قوي يدوم 5 ثواني — نبضات متكررة */
+    const alarmDur = 5;
+    const beepLen  = 0.18, gap = 0.10;
+    const freqs    = [880, 1100, 880, 1100, 880, 1100, 880, 1100,
+                      880, 1100, 880, 1100, 880, 1100, 880, 1100];
+    let t = A.currentTime;
+    freqs.forEach(f=>{
+      const o = A.createOscillator(), g = A.createGain();
+      o.connect(g); g.connect(master);
+      o.frequency.value = f; o.type = 'square';
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.8, t + 0.02);
+      g.gain.setValueAtTime(0.8, t + beepLen - 0.02);
+      g.gain.linearRampToValueAtTime(0, t + beepLen);
+      o.start(t); o.stop(t + beepLen);
+      t += beepLen + gap;
+      if(t - A.currentTime > alarmDur) return;
+    });
+  }catch(_){}
+}
+
+function speak(txt){
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang='ar-SA'; u.rate=.88; u.pitch=1.1; u.volume=1;
+  speechSynthesis.speak(u);
+}
+
+/* ══ TEST SOUND ══ */
+function testSound(){
+  beep();
+  setTimeout(()=> speak('اختبار المنبه، انتهى وقت الزبون'), 800);
+}
+window.testSound = testSound;
+
+/* ══ INIT ══ */
+loadCfg();
+fbListen();
+</script>
+</body>
+</html>
